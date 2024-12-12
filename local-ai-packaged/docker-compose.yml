@@ -90,7 +90,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-
+        
   n8n-import:
     <<: *service-n8n
     container_name: n8n-import
