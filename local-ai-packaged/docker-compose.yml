@@ -49,17 +49,13 @@ x-init-ollama: &init-ollama
 
 services:
   postgres:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    networks: ['demo']
-    restart: unless-stopped
+    image: ankane/pgvector:16
     ports:
-      - 5432:5432
+      - "5432:5432"
     environment:
-      - POSTGRES_USER
-      - POSTGRES_PASSWORD
-      - POSTGRES_DB
+      POSTGRES_USER:
+      POSTGRES_PASSWORD:
+      POSTGRES_DB:
     volumes:
       - postgres_storage:/var/lib/postgresql/data
     healthcheck:
