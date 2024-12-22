@@ -6,6 +6,7 @@ volumes:
   open-webui:
   flowise:
   db-config:
+  db_data:
 
 networks:
   demo:
@@ -158,3 +159,19 @@ services:
     <<: *init-ollama
     depends_on:
       - ollama-gpu
+
+  pgvector-db:
+    env_file:
+      - ./postgres-pgvector/.env
+    build:
+      dockerfile: postgres.Dockerfile
+    container_name: postgres-pgvector
+    ports:
+      - "5454:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./postgres/vector_extension.sql:/docker-entrypoint-initdb.d/0-vector_extension.sql
+    networks:
+      - default
+
+version: "3.9"
