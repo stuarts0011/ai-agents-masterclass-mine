@@ -1,28 +1,16 @@
-# Extend the official PostgreSQL 14.1 image
-FROM postgres:14.1
+FROM postgres:16-alpine
 
-# Install necessary dependencies for building pgvector
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    postgresql-server-dev-14 \
+# Install build tools and dependencies
+RUN apk add --no-cache --virtual .build-deps \
+    build-base \
     git \
-    clang-11 \
-    llvm-11 \
-    ca-certificates \  
-    && update-ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+    postgresql-dev \
+ && git clone --depth 1 https://github.com/pgvector/pgvector.git /usr/src/pgvector \
+ && cd /usr/src/pgvector \
+ && make \
+ && make install \
+ && apk del .build-deps \
+ && rm -rf /usr/src/pgvector
 
-# Set clang as the default compiler
-ENV CC=clang-11
-ENV CXX=clang++-11
-
-# Clone and build pgvector
-WORKDIR /tmp
-RUN git clone https://github.com/pgvector/pgvector.git
-
-WORKDIR /tmp/pgvector
-RUN make
-RUN make install
-
-# Enable pgvector in PostgreSQL
+# Set up the database with the extension
 RUN echo "shared_preload_libraries = 'pgvector'" >> /usr/share/postgresql/postgresql.conf.sample
