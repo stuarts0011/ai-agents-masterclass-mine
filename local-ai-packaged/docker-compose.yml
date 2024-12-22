@@ -49,7 +49,7 @@ x-init-ollama: &init-ollama
 
 services:
   postgres:
-    image: ankane/pgvector:16
+    image: ksisoft/pgvector:16.3-alpine
     ports:
       - "5432:5432"
     environment:
