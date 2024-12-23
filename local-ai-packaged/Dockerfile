@@ -5,5 +5,5 @@ WORKDIR /home/node
 # Install additional dependencies
 RUN npm install tslib msg-parser fs --save
 
-# No need to define Tini explicitly, as it's already part of the base image
+# Use the default entrypoint and CMD provided by n8n
 CMD ["n8n"]
