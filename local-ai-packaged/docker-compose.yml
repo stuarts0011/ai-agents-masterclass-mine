@@ -1,5 +1,3 @@
-version: "3.9"
-
 volumes:
   n8n_storage:
   postgres_storage:
@@ -105,34 +103,24 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+
   n8n:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    <<: *service-n8n
     container_name: n8n
     restart: unless-stopped
     ports:
       - 5678:5678
     volumes:
       - n8n_storage:/home/node/.n8n
+      - ./n8n/backup:/backup
       - ./shared:/data/shared
-      - ./scripts:/scripts
       - C:\Users\ssimington\Documents\Clientfilesdummy:/data/clientfiles
     depends_on:
       postgres:
         condition: service_healthy
-    networks:
-      - demo
-    environment:
-      - PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-      - DB_TYPE=postgresdb
-      - DB_POSTGRESDB_HOST=postgres
-      - DB_POSTGRESDB_USER=${POSTGRES_USER}
-      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
-      - N8N_DIAGNOSTICS_ENABLED=false
-      - N8N_PERSONALIZATION_ENABLED=false
-      - NODE_PATH=/home/node/node_modules
-      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+      n8n-import:
+        condition: service_completed_successfully
+
 
   qdrant:
     image: qdrant/qdrant
