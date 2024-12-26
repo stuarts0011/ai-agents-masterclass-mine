@@ -115,13 +115,13 @@ services:
       - ./n8n/backup:/backup
       - ./shared:/data/shared
       - C:\Users\ssimington\Documents\Clientfilesdummy:/data/clientfiles
+    entrypoint: /bin/sh -c "npm install msg-parser tslib && n8n start"
     depends_on:
       postgres:
         condition: service_healthy
       n8n-import:
         condition: service_completed_successfully
-
-
+  
   qdrant:
     image: qdrant/qdrant
     container_name: qdrant
