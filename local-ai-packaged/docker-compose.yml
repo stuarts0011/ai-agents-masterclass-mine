@@ -10,17 +10,19 @@ networks:
   demo:
 
 x-n8n: &service-n8n
-  image: n8nio/n8n:latest
+  build: .
   networks: ['demo']
   environment:
     - DB_TYPE=postgresdb
     - DB_POSTGRESDB_HOST=postgres
     - DB_POSTGRESDB_USER=${POSTGRES_USER}
     - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
-    - N8N_DIAGNOSTICS_ENABLED=false
-    - N8N_PERSONALIZATION_ENABLED=false
+    - N8N_DIAGNOSTICS_ENABLED=true
+    - N8N_PERSONALIZATION_ENABLED=true
     - N8N_ENCRYPTION_KEY
     - N8N_USER_MANAGEMENT_JWT_SECRET
+    - NODE_FUNCTION_ALLOW_EXTERNAL=tslib, compound-binary-file-js
+    - NODE_FUNCTION_ALLOW_BUILTIN=*
   links:
     - postgres
 
@@ -115,7 +117,6 @@ services:
       - ./n8n/backup:/backup
       - ./shared:/data/shared
       - C:\Users\ssimington\Documents\Clientfilesdummy:/data/clientfiles
-    entrypoint: /bin/sh -c "npm install msg-parser tslib && n8n start"
     depends_on:
       postgres:
         condition: service_healthy
