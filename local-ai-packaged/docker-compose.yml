@@ -5,6 +5,7 @@ volumes:
   qdrant_storage:
   open-webui:
   flowise:
+  crawl4ai_storage:  # Added volume for Crawl4AI
 
 networks:
   demo:
@@ -45,7 +46,7 @@ x-init-ollama: &init-ollama
   entrypoint: /bin/sh
   command:
     - "-c"
-    - "sleep 3; OLLAMA_HOST=ollama:11434 ollama pull llama3.1; OLLAMA_HOST=ollama:11434 ollama pull nomic-embed-text"
+    - "sleep 3; OLLAMA_HOST=ollama:11434 ollama pull llama3.3:70b; OLLAMA_HOST=ollama:11434 ollama pull nomic-embed-text"
 
 services:
   flowise:
@@ -76,7 +77,7 @@ services:
       - open-webui:/app/backend/data
 
   postgres:
-    image: ksisoft/pgvector:16.3-alpine
+    image: ankane/pgvector
     networks: ['demo']
     restart: unless-stopped
     ports:
@@ -107,22 +108,22 @@ services:
         condition: service_healthy
 
   n8n:
-    <<: *service-n8n
+    build: .
     container_name: n8n
     restart: unless-stopped
     ports:
-      - 5678:5678
+      - "5678:5678"
     volumes:
       - n8n_storage:/home/node/.n8n
       - ./n8n/backup:/backup
       - ./shared:/data/shared
       - C:\Users\ssimington\Documents\Clientfilesdummy:/data/clientfiles
-      - P:/AffinityClientFiles:/data/affinityclientfiles
     depends_on:
       postgres:
         condition: service_healthy
-      n8n-import:
-        condition: service_completed_successfully
+    networks:
+      - demo
+
   
   qdrant:
     image: qdrant/qdrant
@@ -160,3 +161,23 @@ services:
     <<: *init-ollama
     depends_on:
       - ollama-gpu
+
+  crawl4ai:
+    build:
+      context: ./crawl4ai  # Path to the crawl4ai directory
+    container_name: crawl4ai
+    restart: unless-stopped
+    ports:
+      - "11235:11235"  # Expose the FastAPI server port
+      - "8000:8000"    # Optional: Playwright port
+    volumes:
+      - ./crawl4ai/config:/app/config  # Configuration directory
+      - ./crawl4ai/data:/app/data      # Persistent storage
+    networks:
+      - demo
+    environment:
+      - INSTALL_TYPE=all      # Install all dependencies (torch, transformers, etc.)
+      - ENABLE_GPU=false      # Disable GPU support (set to true if GPU is available)
+      - PYTHON_VERSION=3.10   # Python version used
+    command: >
+      uvicorn main:app --host 0.0.0.0 --port 11235
