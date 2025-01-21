@@ -1,0 +1,97 @@
+const path = require('path');
+const { Msg, PidTagAttachFilename, PidTagSubject, PidTagTo, PidTagFrom, PidTagBody, PidTagSenderName, PidTagSenderEmailAddress, PidTagDisplayTo, PidTagDisplayFrom, PidTagClientSubmitTime, PidTagReceivedTime, PidTagDateSent, PidTagDisplayCc, PidTagDisplayBcc, PidTagOriginalDisplayCc, PidTagOriginalDisplayBcc } = require('msg-parser');
+const fs = require('fs');
+const os = require('os');
+const mime = require('mime-types');
+
+// Ensure the output folder exists
+const outputFolder = path.join(os.tmpdir(), "msg_parser_output");
+if (!fs.existsSync(outputFolder)) {
+    fs.mkdirSync(outputFolder);
+}
+
+// Get the file path from the input data
+const filePath = $('Set Identifier').item.json.filePath;  // Adjust as necessary for your setup
+
+// Read the .msg file asynchronously
+const data = await fs.promises.readFile(filePath);
+const msg = Msg.fromUint8Array(new Uint8Array(data));
+
+const result = [];
+
+function safeGetProperty(msg, propertyId) {
+    try {
+        return msg.getProperty(propertyId) || '';
+    } catch {
+        return '';
+    }
+}
+
+// Recursive function to process message, attachments, and embedded messages
+async function processMessage(msg, depth = 0) {
+    const currentResult = [];
+
+    // Process the current message data, including CC and BCC
+    currentResult.push({
+        json: {
+            type: 'msg',
+            to: safeGetProperty(msg, PidTagTo) || safeGetProperty(msg, PidTagDisplayTo),
+            from: safeGetProperty(msg, PidTagFrom) || safeGetProperty(msg, PidTagSenderName) || safeGetProperty(msg, PidTagSenderEmailAddress) || safeGetProperty(msg, PidTagDisplayFrom),
+            cc: safeGetProperty(msg, PidTagDisplayCc) || safeGetProperty(msg, PidTagOriginalDisplayCc),  // Use correct CC properties
+            bcc: safeGetProperty(msg, PidTagDisplayBcc) || safeGetProperty(msg, PidTagOriginalDisplayBcc),  // Use correct BCC properties
+            subject: safeGetProperty(msg, PidTagSubject),
+            date: safeGetProperty(msg, PidTagClientSubmitTime) || safeGetProperty(msg, PidTagReceivedTime) || safeGetProperty(msg, PidTagDateSent),
+            contents: safeGetProperty(msg, PidTagBody)
+        }
+    });
+
+    // Process attachments for the current message
+    await Promise.all(msg.attachments().map(async (attachment, index) => {
+        const fileName = safeGetProperty(attachment, PidTagAttachFilename) || `attachment_${index + 1}`;
+        const attachmentFilePath = path.join(outputFolder, fileName.replace(/[\\/:*?"<>|]/g, '_'));
+
+        // Write the attachment to file
+        fs.writeFileSync(attachmentFilePath, Buffer.from(attachment.content()));
+
+        // Detect MIME type based on the file extension
+        const mimeType = mime.lookup(attachmentFilePath) || 'application/octet-stream';
+
+        // Pass the binary content as Buffer
+        const binaryData = Buffer.from(attachment.content());
+
+        // Push the attachment data into N8N's expected format
+        currentResult.push({
+            json: {
+                type: 'attachment',
+                fileName,
+                mimeType,
+                filePath: attachmentFilePath,
+            },
+            binary: {
+                data: binaryData,  // Buffer type
+                fileName: fileName  // Include the fileName for N8N to recognize the binary content
+            }
+        });
+    }));
+
+    // Process embedded messages recursively
+    await Promise.all(msg.embeddedMessages().map(async (embeddedMsg, index) => {
+        try {
+            const embeddedMessage = msg.extractEmbeddedMessage(embeddedMsg);
+            const embeddedResults = await processMessage(embeddedMessage, depth + 1);
+
+            // Include the embedded message results in the current result
+            currentResult.push(...embeddedResults);
+        } catch (error) {
+            console.error('Error processing embedded message:', error);
+        }
+    }));
+
+    return currentResult;
+}
+
+// Process the root message and recursively handle embedded messages and attachments
+const resultItems = await processMessage(msg);
+
+// Return the result as individual items
+return resultItems;

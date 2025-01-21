@@ -1,0 +1,198 @@
+{
+  "name": "Enhanced Workflow with Initialization",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const fs = require('fs');\nconst path = require('path');\n\nconst directoryPath = '/data/clientfiles';\nconst files = fs.readdirSync(directoryPath);\n\nconst output = files.map(file => {\n    const filePath = path.join(directoryPath, file);\n    const stats = fs.statSync(filePath);\n\n    if (!stats.isFile()) {\n        return null;\n    }\n\n    return {\n        json: {\n            type: 'file_initial',\n            filePath,\n            fileName: file,\n            fileSize: stats.size,\n            createdAt: stats.birthtime,\n            modifiedAt: stats.mtime\n        }\n    };\n}).filter(item => item !== null);\n\nreturn output;"
+      },
+      "name": "Initialize Files",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [200, 200]
+    },
+    {
+      "parameters": {
+        "triggerOn": "folder",
+        "path": "/data/clientfiles",
+        "events": ["add", "change"],
+        "options": {
+          "ignoreInitial": true,
+          "usePolling": true
+        }
+      },
+      "name": "Local File Trigger",
+      "type": "n8n-nodes-base.localFileTrigger",
+      "typeVersion": 1,
+      "position": [200, 400]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "field": "type",
+                    "value": "file_initial",
+                    "operation": "equals"
+                  }
+                ]
+              },
+              "outputKey": "file_initial"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "field": "type",
+                    "value": "file_added",
+                    "operation": "equals"
+                  }
+                ]
+              },
+              "outputKey": "file_added"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  {
+                    "field": "type",
+                    "value": "file_changed",
+                    "operation": "equals"
+                  }
+                ]
+              },
+              "outputKey": "file_changed"
+            }
+          ]
+        }
+      },
+      "name": "Switch File Types",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [400, 300]
+    },
+    {
+      "parameters": {
+        "fileSelector": "={{$json.filePath}}",
+        "options": {
+          "dataPropertyName": "data"
+        }
+      },
+      "name": "Read File1",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [600, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "if ($json.type === 'file_initial') {\n    return [$json]; // Pass through directly\n} else {\n    const fs = require('fs');\n    const filePath = $json.file_added || $json.file_changed;\n    const fileContent = fs.readFileSync(filePath);\n    return [{\n        json: $json,\n        binary: {\n            data: fileContent\n        }\n    }];\n}"
+      },
+      "name": "Process Files",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [800, 300]
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "=data",
+        "options": {}
+      },
+      "name": "Extract from PDF",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [1000, 300]
+    },
+    {
+      "parameters": {
+        "chunkSize": 2000,
+        "chunkOverlap": 200,
+        "options": {
+          "splitCode": "markdown"
+        }
+      },
+      "name": "Split Text",
+      "type": "n8n-nodes-base.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [1200, 300]
+    }
+  ],
+  "connections": {
+    "Initialize Files": {
+      "main": [
+        [
+          {
+            "node": "Switch File Types",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Local File Trigger": {
+      "main": [
+        [
+          {
+            "node": "Switch File Types",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch File Types": {
+      "main": [
+        [
+          {
+            "node": "Process Files",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read File1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Read File1": {
+      "main": [
+        [
+          {
+            "node": "Process Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Files": {
+      "main": [
+        [
+          {
+            "node": "Extract from PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from PDF": {
+      "main": [
+        [
+          {
+            "node": "Split Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
+
