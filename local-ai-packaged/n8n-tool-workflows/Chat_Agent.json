@@ -1,0 +1,283 @@
+{
+  "name": "Chat Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "db28387d-1a6c-4ba1-85e5-d7a70f437348",
+      "name": "When chat message received",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -220,
+        -700
+      ],
+      "webhookId": "e9325791-143d-4aea-be69-160d6bbf9653"
+    },
+    {
+      "parameters": {
+        "model": "llama3.1:latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        160,
+        -460
+      ],
+      "id": "a8fbabfb-9356-4025-83de-28fe6a26cc7f",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "O4W78n799KDImsmX",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "invoke_n8n_agent",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -220,
+        -520
+      ],
+      "id": "b03c4870-2f76-49af-89a9-d728febd9dd9",
+      "name": "Webhook",
+      "webhookId": "fee50e6f-4ee5-4c0a-9d0c-58ed9a280f49"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        -700
+      ],
+      "id": "03ff9a7b-fa7f-477a-b7a2-5032d6fc042e",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "75ebfdef-c8e2-4c3e-b716-1479d0cc2a73",
+              "name": "chatInput",
+              "value": "={{ $json?.chatInput || $json.body.chatInput }}",
+              "type": "string"
+            },
+            {
+              "id": "59b7a20f-0626-4861-93e2-015d430c266e",
+              "name": "sessionId",
+              "value": "={{ $json?.sessionId || $json.body.sessionId}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "42aea80f-6bb5-4268-833a-6b0256f6959a",
+      "name": "Edit Fields",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        80,
+        -700
+      ]
+    },
+    {
+      "parameters": {
+        "name": "Call_Legislation_and_Caselaw_Agent",
+        "description": "Call this tool to get information on information on legislation or caselaw related to or on the topic that the user has requested.",
+        "workflowId": {
+          "__rl": true,
+          "value": "Fa3LqJKu9ExqVLy9",
+          "mode": "list",
+          "cachedResultName": "Legislation and Caselaw Agent"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2,
+      "position": [
+        280,
+        -460
+      ],
+      "id": "1f57619b-25b8-4fd2-b74e-a316daabc4be",
+      "name": "Call Legislation and Caselaw Agent"
+    },
+    {
+      "parameters": {
+        "name": "Call_RAG_Database_Agent",
+        "description": "Call this tool to get information on information from the RAG database related to or on the topic that the user has requested.",
+        "workflowId": {
+          "__rl": true,
+          "value": "bfgJ93af4InoKFil",
+          "mode": "list",
+          "cachedResultName": "RAG Database Agent"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2,
+      "position": [
+        440,
+        -460
+      ],
+      "id": "ac6f5a71-4b93-427b-be8d-c8550babfa30",
+      "name": "Call RAG Database Agent"
+    },
+    {
+      "parameters": {
+        "agent": "planAndExecuteAgent",
+        "options": {
+          "humanMessageTemplate": "Previous steps: {previous_steps}\n\nCurrent objective: {current_step}\nYou are the Head Agent in a Retrieval-Augmented Generation (RAG) system designed to assist lawyers in NSW, Australia. Your role is to process user queries, determine the appropriate action, and delegate tasks to specialized agents. You have access to the following tools:\n1. RAG Database Tool: Retrieves information from a database of legal documents.\n2. Legislation and Caselaw Tool: Checks for caselaw and legislation updates and discrepancies.\n\nYour responsibilities include:\n1. Parsing the user's query to determine its type (e.g., caselaw, legislation, RAG search including document summarization and, drafting).\n2. Using the appropriate tool(s) based on the query type.\n3. Formatting the response in a structured, professional manner.\n4. Not hallucinating. If you don't know the answer, say you do not know.\n\nAlways maintain a neutral, objective tone and prioritize accuracy and relevance.\n{agent_scratchpad}\n\nYou should extract and combine any relevant data from your tools when responding to me.\n\nAll responses should be in a professional format with headings and not including any markdown tags"
+        }
+      },
+      "id": "fc56d96d-d1b4-4b74-9ef2-4b4983edc3cb",
+      "name": "Plan Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        300,
+        -700
+      ]
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        580,
+        -460
+      ],
+      "id": "7f9aad92-fb21-440f-8423-c2d97b305cd6",
+      "name": "HTTP Request"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Plan Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Plan Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Legislation and Caselaw Agent": {
+      "ai_tool": [
+        [
+          {
+            "node": "Plan Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call RAG Database Agent": {
+      "ai_tool": [
+        [
+          {
+            "node": "Plan Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plan Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "ai_tool": [
+        [
+          {
+            "node": "Plan Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "e95b4efc-0779-469b-9d6e-8458b90993cf",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "558d88703fb65b2d0e44613bc35916258b0f0bf983c5d4730c00c424b77ca36a"
+  },
+  "id": "nMjahTtmGPkLwINJ",
+  "tags": []
+}

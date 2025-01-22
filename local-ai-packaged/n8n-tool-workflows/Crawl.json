@@ -1,0 +1,245 @@
+{
+  "name": "Crawl",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// Function to make an HTTP POST request to the crawl4ai API\nasync function crawlWithCrawl4ai(urls) {\n  const response = await fetch('http://crawl4ai:11235/crawl', {\n    method: 'POST',\n    headers: {\n      'Content-Type': 'application/json',\n    },\n    body: JSON.stringify({\n      urls,\n      options: {\n        respectRobotsTxt: true,\n        maxDepth: 3, // Adjust depth as needed\n      },\n    }),\n  });\n\n  if (!response.ok) {\n    throw new Error(`HTTP error! Status: ${response.status}`);\n  }\n\n  return response.json();\n}\n\n// Function to check for changes and update the database\nasync function processCrawlResults(crawlResults, crawl_id) {\n  const processedData = [];\n\n  // Ensure crawlResults is an array\n  if (!Array.isArray(crawlResults)) {\n    console.error('crawlResults is not an array:', crawlResults);\n    throw new Error('crawlResults must be an array');\n  }\n\n  for (const page of crawlResults) {\n    const { url, title, content, content_hash, depth, status_code, response_time, headers } = page;\n\n    // Check if the URL already exists in the database\n    const res = await $pg.query('SELECT content_hash FROM your_table WHERE url = $1', [url]);\n\n    if (res.rowCount === 0) {\n      // Insert new record if URL does not exist\n      await $pg.query(\n        'INSERT INTO your_table(url, title, content, content_hash, depth, status_code, response_time, headers, crawl_id) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)',\n        [url, title, content, content_hash, depth, status_code, response_time, JSON.stringify(headers), crawl_id]\n      );\n      processedData.push({ url, title, content, content_hash, crawl_id, is_new: true, is_updated: false });\n    } else if (res.rows[0].content_hash !== content_hash) {\n      // Delete old record if content has changed\n      await $pg.query('DELETE FROM your_table WHERE url = $1', [url]);\n\n      // Insert new record with updated content\n      await $pg.query(\n        'INSERT INTO your_table(url, title, content, content_hash, depth, status_code, response_time, headers, crawl_id) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)',\n        [url, title, content, content_hash, depth, status_code, response_time, JSON.stringify(headers), crawl_id]\n      );\n      processedData.push({ url, title, content, content_hash, crawl_id, is_new: false, is_updated: true });\n    } else {\n      // Content has not changed\n      processedData.push({ url, title, content, content_hash, crawl_id, is_new: false, is_updated: false });\n    }\n  }\n\n  return processedData;\n}\n\n// Main function\nasync function execute() {\n  try {\n    // List of URLs to crawl\n    const urls = [\n      'https://legislation.nsw.gov.au/view/html/inforce/current/act-1998-047',\n      'https://legislation.nsw.gov.au/view/html/inforce/current/sl-2021-0689',\n    ];\n\n    // Call the crawl4ai API\n    const crawlResults = await crawlWithCrawl4ai(urls);\n\n    // Log the response for debugging\n    console.log('Response from crawl4ai:', JSON.stringify(crawlResults, null, 2));\n\n    // Generate a unique crawl_id\n    const crawl_id = `crawl-${Date.now()}-${Math.floor(Math.random() * 1000)}`;\n\n    // Process the crawl results (check for changes, update database)\n    const processedData = await processCrawlResults(crawlResults, crawl_id);\n\n    // Return the processed data\n    return processedData;\n  } catch (error) {\n    console.error(`Failed to crawl or process data: ${error.message}`);\n    throw error;\n  }\n}\n\n// Execute the main function and return the result\nreturn execute();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        2440
+      ],
+      "id": "146c3295-c022-4098-b097-83b318e37f11",
+      "name": "Website crawler"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -380,
+        2440
+      ],
+      "id": "63196e45-5e36-443c-8eed-9f83f328b315",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "tableName": "legislation_caselaw",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePGVector",
+      "typeVersion": 1,
+      "position": [
+        140,
+        2440
+      ],
+      "id": "0fe98796-4306-4a42-9a89-b47820684e8a",
+      "name": "Postgres PGVector Store1",
+      "credentials": {
+        "postgres": {
+          "id": "HPFAR0N6uBzvg2tU",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "url",
+                "value": "=\"{{item.url}}\""
+              },
+              {
+                "name": "title",
+                "value": "={{item.title}}"
+              },
+              {
+                "name": "content",
+                "value": "={{item.content}}"
+              },
+              {
+                "name": "content_hash",
+                "value": "={{item.content_hash}}"
+              },
+              {
+                "name": "source",
+                "value": "={{item.source}}"
+              },
+              {
+                "name": "depth",
+                "value": "={{item.depth}}"
+              },
+              {
+                "name": "language",
+                "value": "={{item.language}}"
+              },
+              {
+                "name": "content_type",
+                "value": "={{item.content_type}}"
+              },
+              {
+                "name": "author",
+                "value": "={{item.author}}"
+              },
+              {
+                "name": "published_date",
+                "value": "={{item.published_date}}"
+              },
+              {
+                "name": "keywords",
+                "value": "={{item.keywords}}"
+              },
+              {
+                "name": "status_code",
+                "value": "={{item.status_code}}"
+              },
+              {
+                "name": "response_time",
+                "value": "={{item.response_time}}"
+              },
+              {
+                "name": "headers",
+                "value": "={{item.headers}}"
+              },
+              {
+                "name": "is_new",
+                "value": "={{item.is_new}}"
+              },
+              {
+                "name": "is_updated",
+                "value": "={{item.is_updated}}"
+              },
+              {
+                "name": "crawl_id",
+                "value": "={{item.crawl_id}}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1,
+      "position": [
+        260,
+        2640
+      ],
+      "id": "80673669-60a2-4e9b-b98d-4d916d3f3132",
+      "name": "Default Data Loader1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        280,
+        2840
+      ],
+      "id": "0ee22e8b-b886-4a5c-8022-5b649f0846c1",
+      "name": "Recursive Character Text Splitter1"
+    },
+    {
+      "parameters": {
+        "model": "nomic-embed-text:latest"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [
+        120,
+        2740
+      ],
+      "id": "94cab9cd-b6f9-407c-aa51-f7a91907bbb2",
+      "name": "Embeddings Ollama2",
+      "credentials": {
+        "ollamaApi": {
+          "id": "O4W78n799KDImsmX",
+          "name": "Ollama account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Website crawler": {
+      "main": [
+        [
+          {
+            "node": "Postgres PGVector Store1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Website crawler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader1": {
+      "ai_document": [
+        [
+          {
+            "node": "Postgres PGVector Store1",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter1": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader1",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Ollama2": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Postgres PGVector Store1",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "2494d256-e950-4e2f-84f1-08876503ae43",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "558d88703fb65b2d0e44613bc35916258b0f0bf983c5d4730c00c424b77ca36a"
+  },
+  "id": "Q3RHcKMDLWfB4TFg",
+  "tags": []
+}

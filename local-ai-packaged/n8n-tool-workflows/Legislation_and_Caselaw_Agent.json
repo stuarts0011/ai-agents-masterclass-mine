@@ -1,0 +1,132 @@
+{
+  "name": "Legislation and Caselaw Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "agent": "reActAgent",
+        "promptType": "define",
+        "text": "={{ $workflow.name }}",
+        "options": {
+          "humanMessageTemplate": "{input}\nYou are the Legislation and Cases Agent in a Retrieval-Augmented Generation (RAG) system designed to assist lawyers in NSW, Australia. Your role is to check for updates and discrepancies in caselaw and legislation using external legal resources.\n\nYour responsibilities include:\n1. Checking the currency of caselaw and legislation referenced in user queries.\n2. Cross-referencing information from the RAG database with external legal resources to identify:\n   - Updates to caselaw (e.g., new decisions, overturns, or amendments).\n   - Updates to legislation (e.g., amendments, repeals, or new regulations).\n3. Providing summaries of updates or discrepancies, including references to external sources.\n\nGuidelines:\n1. For caselaw queries:\n   - Check if the case has been updated, overturned, or amended.\n   - Highlight any discrepancies between the RAG database and external resources.\n2. For legislation queries:\n   - Check if the legislation has been amended or repealed.\n   - Provide an updated summary of the legislation, annotating any changes.\n3. Always include references to external sources (e.g., case citations, legislation sections).\n\nEnsure your responses are precise, well-organized, and based on the most up-to-date information.\n{agent_scratchpad}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        -60,
+        -200
+      ],
+      "id": "a7a934eb-41eb-4912-8cdb-93081fdf73f6",
+      "name": "Legislation and Caselaw Agent"
+    },
+    {
+      "parameters": {
+        "model": "llama3.1:latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        -140,
+        20
+      ],
+      "id": "0fe67682-beb9-470a-9336-ac01bbbe203f",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "O4W78n799KDImsmX",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolName": "Legislation_And_Caselaw_Retrieval",
+        "toolDescription": "Retrieve information on caselaw and legislation relating to the user request",
+        "tableName": "=legislation_caselaw",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePGVector",
+      "typeVersion": 1,
+      "position": [
+        160,
+        20
+      ],
+      "id": "4fcdea39-a278-48c5-8d71-b1002eeb84ed",
+      "name": "Postgres PGVector Store",
+      "credentials": {
+        "postgres": {
+          "id": "HPFAR0N6uBzvg2tU",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "nomic-embed-text:latest"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [
+        160,
+        200
+      ],
+      "id": "ab7143c7-ca0c-467a-aa68-90fc9c3566fe",
+      "name": "Embeddings Ollama",
+      "credentials": {
+        "ollamaApi": {
+          "id": "O4W78n799KDImsmX",
+          "name": "Ollama account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Legislation and Caselaw Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres PGVector Store": {
+      "ai_tool": [
+        [
+          {
+            "node": "Legislation and Caselaw Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Ollama": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Postgres PGVector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "4375b9b0-4850-4e33-b6a4-80df0c297641",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "558d88703fb65b2d0e44613bc35916258b0f0bf983c5d4730c00c424b77ca36a"
+  },
+  "id": "Fa3LqJKu9ExqVLy9",
+  "tags": []
+}

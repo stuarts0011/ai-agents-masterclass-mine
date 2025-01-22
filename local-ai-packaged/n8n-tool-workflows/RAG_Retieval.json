@@ -1,0 +1,1008 @@
+{
+  "name": "RAG Retieval",
+  "nodes": [
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "id": "d9c479b5-5cd3-41d9-a144-fb8625998fd3",
+      "name": "Aggregate1",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1500,
+        1600
+      ]
+    },
+    {
+      "parameters": {
+        "fieldsToSummarize": {
+          "values": [
+            {
+              "aggregation": "concatenate",
+              "field": "data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "67fe58ac-76da-4f37-8578-084a9280e86a",
+      "name": "Summarize1",
+      "type": "n8n-nodes-base.summarize",
+      "typeVersion": 1,
+      "position": [
+        1660,
+        1600
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "=data",
+        "options": {}
+      },
+      "id": "0ec7d543-9c4e-499f-a4bd-fde34e9cfd09",
+      "name": "Extract PDF Text",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        1300,
+        1480
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "xlsx",
+        "binaryPropertyName": "=data",
+        "options": {}
+      },
+      "id": "828bad1a-d4f2-4521-8823-507ba9cd16b6",
+      "name": "Extract from Excel",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        1300,
+        1640
+      ]
+    },
+    {
+      "parameters": {
+        "chunkSize": 2000,
+        "chunkOverlap": 200,
+        "options": {
+          "splitCode": "markdown"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        2300,
+        2140
+      ],
+      "id": "8315789b-2010-443a-a1c3-03b51ee087ef",
+      "name": "Recursive Character Text Splitter"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Read File1').item.json.mimeType }}",
+                    "rightValue": "application/pdf",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "pdf"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "2ae7faa7-a936-4621-a680-60c512163034",
+                    "leftValue": "={{ $('Read File1').item.json.mimeType }}",
+                    "rightValue": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "excel"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "7ddfa924-1c26-4ee3-9890-5c9d2b96717a",
+                    "leftValue": "={{ $('Read File1').item.json.mimeType }}",
+                    "rightValue": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "docx"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "f53caf8b-7a8f-4d1e-98f4-deaf0e0171f0",
+                    "leftValue": "={{ $('Read File1').item.json.mimeType }}",
+                    "rightValue": "application/msword",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "docm"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "cd9ca627-d00d-4c30-903a-41f603c8e36f",
+                    "leftValue": "={{ $('Read File1').item.json.mimeType }}",
+                    "rightValue": "application/vnd.ms-word",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "ms-word"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "dfe08094-6bc1-41ee-adcf-5af5d287b5bf",
+                    "leftValue": "={{ $('Read File1').item.json.mimeType }}",
+                    "rightValue": "=application/vnd.ms-outlook",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "msg"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7530e7f3-ef4d-40bd-8cde-4042bdae7082",
+      "name": "Switch2",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        1100,
+        1680
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePGVector",
+      "typeVersion": 1,
+      "position": [
+        2360,
+        1380
+      ],
+      "id": "4e463e8d-119c-4c6a-8569-209595e35222",
+      "name": "Postgres PGVector Store2",
+      "credentials": {
+        "postgres": {
+          "id": "HPFAR0N6uBzvg2tU",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "d15cde67-b5b0-4676-b4fb-ead749147392",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    },
+                    "leftValue": "={{$('Process Initial Files').item.json.type === 'file_changed'}}",
+                    "rightValue": "changed"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "file_changed"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    },
+                    "leftValue": "={{$('Process Initial Files').item.json.type === 'file_added'}}",
+                    "rightValue": "add"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "file_added"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "6f84bafc-b92a-42e5-9520-99ffca3a21df",
+                    "leftValue": "={{$('Process Initial Files').item.json.type === 'file_initial'}}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "file_initial"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0eb4fa5f-3c7c-4ea9-af2c-4a0663b6a48c",
+      "name": "Handle File Event",
+      "type": "n8n-nodes-base.switch",
+      "position": [
+        900,
+        1760
+      ],
+      "typeVersion": 3,
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "fileSelector": "={{$json.type === 'file_added' || $json.type === 'file_changed' || $json.type === 'file_initial' ? $json.filePath : ''}}",
+        "options": {
+          "dataPropertyName": "data"
+        }
+      },
+      "id": "f6060edf-883c-4f51-b672-ea2d983c6e55",
+      "name": "Read File1",
+      "type": "n8n-nodes-base.readWriteFile",
+      "position": [
+        600,
+        1760
+      ],
+      "typeVersion": 1,
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "jsCode": "const path = require('path');\nconst { Msg, PidTagAttachFilename, PidTagSubject, PidTagTo, PidTagFrom, PidTagBody, PidTagSenderName, PidTagSenderEmailAddress, PidTagDisplayTo, PidTagDisplayFrom, PidTagClientSubmitTime, PidTagReceivedTime, PidTagDateSent, PidTagDisplayCc, PidTagDisplayBcc, PidTagOriginalDisplayCc, PidTagOriginalDisplayBcc } = require('msg-parser');\nconst fs = require('fs');\nconst os = require('os');\nconst mime = require('mime-types');\n\n// Ensure the output folder exists\nconst outputFolder = path.join(os.tmpdir(), \"msg_parser_output\");\nif (!fs.existsSync(outputFolder)) {\n    fs.mkdirSync(outputFolder);\n}\n\n// Get the file path from the input data\nconst filePath = $('Set Identifier').item.json.filePath;  // Adjust as necessary for your setup\n\n// Read the .msg file asynchronously\nconst data = await fs.promises.readFile(filePath);\nconst msg = Msg.fromUint8Array(new Uint8Array(data));\n\nconst result = [];\n\nfunction safeGetProperty(msg, propertyId) {\n    try {\n        return msg.getProperty(propertyId) || '';\n    } catch {\n        return '';\n    }\n}\n\n// Recursive function to process message, attachments, and embedded messages\nasync function processMessage(msg, depth = 0) {\n    const currentResult = [];\n\n    // Process the current message data, including CC and BCC\n    currentResult.push({\n        json: {\n            type: 'msg',\n            to: safeGetProperty(msg, PidTagTo) || safeGetProperty(msg, PidTagDisplayTo),\n            from: safeGetProperty(msg, PidTagFrom) || safeGetProperty(msg, PidTagSenderName) || safeGetProperty(msg, PidTagSenderEmailAddress) || safeGetProperty(msg, PidTagDisplayFrom),\n            cc: safeGetProperty(msg, PidTagDisplayCc) || safeGetProperty(msg, PidTagOriginalDisplayCc),  // Use correct CC properties\n            bcc: safeGetProperty(msg, PidTagDisplayBcc) || safeGetProperty(msg, PidTagOriginalDisplayBcc),  // Use correct BCC properties\n            subject: safeGetProperty(msg, PidTagSubject),\n            date: safeGetProperty(msg, PidTagClientSubmitTime) || safeGetProperty(msg, PidTagReceivedTime) || safeGetProperty(msg, PidTagDateSent),\n            contents: safeGetProperty(msg, PidTagBody)\n        }\n    });\n\n    // Process attachments for the current message\n    await Promise.all(msg.attachments().map(async (attachment, index) => {\n        const fileName = safeGetProperty(attachment, PidTagAttachFilename) || `attachment_${index + 1}`;\n        const attachmentFilePath = path.join(outputFolder, fileName.replace(/[\\\\/:*?\"<>|]/g, '_'));\n\n        // Write the attachment to file\n        fs.writeFileSync(attachmentFilePath, Buffer.from(attachment.content()));\n\n        // Detect MIME type based on the file extension\n        const mimeType = mime.lookup(attachmentFilePath) || 'application/octet-stream';\n\n        // Pass the binary content as Buffer\n        const binaryData = Buffer.from(attachment.content());\n\n        // Push the attachment data into N8N's expected format\n        currentResult.push({\n            json: {\n                type: 'attachment',\n                fileName,\n                mimeType,\n                filePath: attachmentFilePath,\n            },\n            binary: {\n                data: binaryData,  // Buffer type\n                fileName: fileName  // Include the fileName for N8N to recognize the binary content\n            }\n        });\n    }));\n\n    // Process embedded messages recursively\n    await Promise.all(msg.embeddedMessages().map(async (embeddedMsg, index) => {\n        try {\n            const embeddedMessage = msg.extractEmbeddedMessage(embeddedMsg);\n            const embeddedResults = await processMessage(embeddedMessage, depth + 1);\n\n            // Include the embedded message results in the current result\n            currentResult.push(...embeddedResults);\n        } catch (error) {\n            console.error('Error processing embedded message:', error);\n        }\n    }));\n\n    return currentResult;\n}\n\n// Process the root message and recursively handle embedded messages and attachments\nconst resultItems = await processMessage(msg);\n\n// Return the result as individual items\nreturn resultItems;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1300,
+        2020
+      ],
+      "id": "bd73d489-e055-48c8-943c-6256fc7d0af2",
+      "name": "Email Msg Parser",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "triggerOn": "folder",
+        "path": "/data/clientfiles",
+        "events": [
+          "add",
+          "unlink",
+          "change"
+        ],
+        "options": {
+          "ignoreInitial": false,
+          "usePolling": true
+        }
+      },
+      "type": "n8n-nodes-base.localFileTrigger",
+      "typeVersion": 1,
+      "position": [
+        40,
+        1760
+      ],
+      "id": "4e5e3e61-ef5a-4151-be7b-6ff42d2c150a",
+      "name": "Local File Trigger"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "dfe08094-6bc1-41ee-adcf-5af5d287b5bf",
+                    "leftValue": "={{ $json[\"type\"] === \"msg\" }}",
+                    "rightValue": "=application/vnd.ms-outlook",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "msg"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json[\"type\"] === \"attachment\" && $json[\"mimeType\"] === \"application/pdf\" }}",
+                    "rightValue": "application/pdf",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "pdf"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "bbcc1789-451a-46d5-be6e-ea7ddbb21071",
+                    "leftValue": "={{ $json[\"type\"] === \"attachment\" && $json[\"mimeType\"] === \"application/vnd.openxmlformats-officedocument.wordprocessingml.document\"",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "docx"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "511e1335-53d5-4245-9ff8-c518fe04ec22",
+      "name": "Switch3",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        1460,
+        1940
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        1900,
+        2100
+      ],
+      "id": "63a8961e-0c39-4ea7-962d-ce35338228b8",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = require('fs');\nconst path = require('path');\nconst crypto = require('crypto');\nconst os = require('os');\n\n// Get file metadata and binary data from the Read File node\nconst fileData = $input.all();\nif (!fileData || fileData.length === 0) {\n    throw new Error('No file data found from the Read File node.');\n}\n\n// Process each file in the input\nconst output = fileData.map(item => {\n    // Derive the fileName and directory from the Read File node\n    const fileName = item.json.fileName;\n    const directory = item.json.directory;\n    const filePath = path.join(directory, fileName);\n\n    // Access the binary data from the Read File node\n    const binaryData = item.binary[\"data\"];\n\n    // Ensure the file exists and binary data is available\n    if (!fs.existsSync(filePath)) {\n        throw new Error(`File not found at path: ${filePath}`);\n    }\n\n    // Get file stats\n    const stats = fs.statSync(filePath);\n\n    // Generate unique identifiers based on file metadata\n    const createdDate = stats.birthtime.toISOString(); // Convert the creation date to string format\n    const modifiedDate = stats.mtime.toISOString(); // Convert the modified date to string format\n\n    // Determine file owner\n    let owner = '';\n    if (process.platform === 'win32') {\n        // For Windows systems\n        const execSync = require('child_process').execSync;\n        const ownerCommand = `powershell -Command (Get-Acl \"${filePath}\").Owner`;\n        owner = execSync(ownerCommand).toString().trim();\n    } else {\n        // For Linux systems\n        const uid = stats.uid;\n        const userInfo = os.userInfo({ uid: uid });\n        owner = userInfo.username || '';\n    }\n\n    // Create unique identifiers based on metadata\n    const createdIdentifier = crypto\n        .createHash('sha256')\n        .update(fileName + createdDate + owner)\n        .digest('hex');\n    const modifiedIdentifier = crypto\n        .createHash('sha256')\n        .update(fileName + modifiedDate + owner)\n        .digest('hex');\n\n    // Return detailed metadata and binary data for the current file\n    return {\n        json: {\n            fileName: fileName,\n            filePath: filePath,\n            mimeType: item.json.mimeType,\n            fileSize: item.json.fileSize,\n            createdAt: stats.birthtime,\n            modifiedAt: stats.mtime,\n            createdIdentifier: createdIdentifier,\n            modifiedIdentifier: modifiedIdentifier,\n            owner: owner,\n        },\n        binary: {\n            data: binaryData // Add the binary data to the output\n        }\n    };\n});\n\n// Return the output for all files\nreturn output;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        740,
+        1760
+      ],
+      "id": "dc173722-2192-4735-824b-10928e45367c",
+      "name": "Set Identifier"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-docx-converter.docxToText",
+      "typeVersion": 1,
+      "position": [
+        1380,
+        1800
+      ],
+      "id": "08ea40f2-b8d6-4c49-a970-fab8e76556bf",
+      "name": "DOCX to Text",
+      "retryOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "file_id",
+                "value": "={{ $('Set Identifier').item.json.modifiedIdentifier }}"
+              },
+              {
+                "name": "creator",
+                "value": "={{ $('Set Identifier').item.json.owner }}"
+              },
+              {
+                "name": "created_at",
+                "value": "={{ $('Set Identifier').item.json.createdAt }}"
+              },
+              {
+                "name": "modified_at",
+                "value": "={{ $('Set Identifier').item.json.modifiedAt }}"
+              },
+              {
+                "name": "file_name",
+                "value": "={{ $('Set Identifier').item.json.fileName }}"
+              },
+              {
+                "name": "file_type",
+                "value": "={{$('Read File1').item.json.mimeType.split(\"/\")[1]}} "
+              },
+              {
+                "name": "created_identifier",
+                "value": "={{ $('Set Identifier').item.json.createdIdentifier }}"
+              },
+              {
+                "name": "modified_at",
+                "value": "={{ $('Set Identifier').item.json.modifiedIdentifier }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1,
+      "position": [
+        2220,
+        1880
+      ],
+      "id": "bb338b96-5ceb-4498-9d09-8e29f63e3167",
+      "name": "Default Data Loader"
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = require('fs');\nconst path = require('path');\n\nconst directoryPath = '/data/clientfiles';\nconst files = fs.readdirSync(directoryPath);\n\nconst output = files.map(file => {\n  const filePath = path.join(directoryPath, file);\n  const stats = fs.statSync(filePath);\n\n  if (!stats.isFile()) {\n    return null; // Skip non-files (e.g., folders)\n  }\n\n  return {\n    json: {\n      type: 'file_initial', // <-- This sets the type\n      filePath,\n      fileName: file,\n      fileSize: stats.size,\n      createdAt: stats.birthtime,\n      modifiedAt: stats.mtime\n    }\n  };\n}).filter(item => item !== null);\n\nreturn output;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        180,
+        1760
+      ],
+      "id": "ae6f527a-258e-4cb4-a9b9-4ab40ea9dac2",
+      "name": "Set Variables1"
+    },
+    {
+      "parameters": {
+        "model": "nomic-embed-text:latest"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [
+        2200,
+        1680
+      ],
+      "id": "99bde874-cce9-45f6-bee2-0894b322eb7d",
+      "name": "Embeddings Ollama1",
+      "credentials": {
+        "ollamaApi": {
+          "id": "O4W78n799KDImsmX",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM n8n_vectors WHERE metadata->>'createdIdentifier' = '{{ $json[\"createdIdentifier\"] }}';\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        900,
+        1980
+      ],
+      "id": "1b1ecbad-3b7c-4f3f-b528-688cd1ccb14c",
+      "name": "Delete Original File Records For Changed Files",
+      "credentials": {
+        "postgres": {
+          "id": "HPFAR0N6uBzvg2tU",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a9d15caa-b022-4686-a27c-a417ee361f82",
+              "leftValue": "={{ $json.file_deleted }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        300,
+        1760
+      ],
+      "id": "463644a8-0313-4010-a4ff-b92c4729e4e3",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM n8n_vectors WHERE metadata->>'fileName' = '{{ $json[\"file_deleted\"] }}';\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        300,
+        1980
+      ],
+      "id": "185d0d86-d4bf-4d3b-ae99-ee2d90dbbe6e",
+      "name": "Delete Original File Records For Deleted Files",
+      "credentials": {
+        "postgres": {
+          "id": "HPFAR0N6uBzvg2tU",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log all items in the input\nconsole.log(\"Inspecting input to Extract node:\");\nconst inputData = $input.all(); // Retrieve all incoming items\n\n// Log each item's structure, including JSON and binary fields\ninputData.forEach((item, index) => {\n    console.log(`Item [${index}]:`);\n    console.log(\"JSON Data:\", item.json); // Log JSON data\n    console.log(\"Binary Data Exists:\", !!item.binary?.data); // Check if binary.data exists\n    if (item.binary?.data) {\n        console.log(\"Binary Data Length:\", item.binary.data.length); // Log binary data length\n        console.log(\"Filename:\", item.json.filename); // Log filename if available\n    } else {\n        console.log(\"Binary Data: Missing\");\n    }\n});\n\nreturn inputData; // Pass the data unchanged to the next node\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        1820
+      ],
+      "id": "5db1e94a-8454-4cf4-a792-2519110a5f88",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = require('fs');\n\n// Process ALL items\nreturn $input.all().map(item => {\n  if (item.json.type === 'file_initial') {\n    const stats = fs.statSync(item.json.filePath);\n    return {\n      json: {\n        ...item.json,\n        fileSize: stats.size,\n        createdAt: stats.birthtime,\n        modifiedAt: stats.mtime\n      },\n      binary: {\n        data: fs.readFileSync(item.json.filePath)\n      }\n    };\n  }\n  return item;\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        1760
+      ],
+      "id": "0931c2df-01a4-49c4-95e4-469e6d19a1f1",
+      "name": "Process Initial Files"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-docx-converter.docxToText",
+      "typeVersion": 1,
+      "position": [
+        1700,
+        1980
+      ],
+      "id": "6f82f2a3-3659-4177-a7a1-cdcf4d71781d",
+      "name": "DOCX to Text1",
+      "retryOnFail": true,
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Aggregate1": {
+      "main": [
+        [
+          {
+            "node": "Summarize1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize1": {
+      "main": [
+        [
+          {
+            "node": "Postgres PGVector Store2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract PDF Text": {
+      "main": [
+        [
+          {
+            "node": "Postgres PGVector Store2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from Excel": {
+      "main": [
+        [
+          {
+            "node": "Aggregate1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch2": {
+      "main": [
+        [
+          {
+            "node": "Extract PDF Text",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Extract from Excel",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [],
+        [],
+        [],
+        [
+          {
+            "node": "Email Msg Parser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle File Event": {
+      "main": [
+        [
+          {
+            "node": "Delete Original File Records For Changed Files",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Switch2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Switch2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Switch2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read File1": {
+      "main": [
+        [
+          {
+            "node": "Set Identifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Msg Parser": {
+      "main": [
+        [
+          {
+            "node": "Switch3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Local File Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set Variables1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch3": {
+      "main": [
+        [
+          {
+            "node": "Postgres PGVector Store2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Postgres PGVector Store2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Identifier": {
+      "main": [
+        [
+          {
+            "node": "Handle File Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Postgres PGVector Store2",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Variables1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Ollama1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Postgres PGVector Store2",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Delete Original File Records For Deleted Files",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Process Initial Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "a62afd0e-f6e4-4f44-8a04-aad9dbf97c9c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "558d88703fb65b2d0e44613bc35916258b0f0bf983c5d4730c00c424b77ca36a"
+  },
+  "id": "nmY3s762RuvswYX8",
+  "tags": []
+}

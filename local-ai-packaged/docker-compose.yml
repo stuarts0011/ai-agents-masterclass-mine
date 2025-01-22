@@ -107,7 +107,8 @@ services:
       postgres:
         condition: service_healthy
 
-  n8n:
+  n8n: 
+    <<: *service-n8n
     build: .
     container_name: n8n
     restart: unless-stopped
@@ -161,3 +162,22 @@ services:
     <<: *init-ollama
     depends_on:
       - ollama-gpu
+  crawl4ai:
+    build:
+      context: ./crawl4ai  # Path to the crawl4ai directory
+    container_name: crawl4ai
+    restart: unless-stopped
+    ports:
+      - "11235:11235"  # Expose the FastAPI server port
+      - "8000:8000"    # Optional: Playwright port
+    volumes:
+      - ./crawl4ai/config:/app/config  # Configuration directory
+      - ./crawl4ai/data:/app/data      # Persistent storage
+    networks:
+      - demo
+    environment:
+      - INSTALL_TYPE=all      # Install all dependencies (torch, transformers, etc.)
+      - ENABLE_GPU=true      # Disable GPU support (set to true if GPU is available)
+      - PYTHON_VERSION=3.10   # Python version used
+    command: >
+      uvicorn main:app --host 0.0.0.0 --port 11235
