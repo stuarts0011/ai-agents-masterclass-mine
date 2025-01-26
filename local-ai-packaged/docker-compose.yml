@@ -24,6 +24,7 @@ x-n8n: &service-n8n
     - N8N_USER_MANAGEMENT_JWT_SECRET
     - NODE_FUNCTION_ALLOW_EXTERNAL=*
     - NODE_FUNCTION_ALLOW_BUILTIN=*
+    - CRAWL4AI_ENDPOINT=http://crawl4ai:11235  # Only new addition
   links:
     - postgres
 
@@ -164,20 +165,26 @@ services:
       - ollama-gpu
   crawl4ai:
     build:
-      context: ./crawl4ai  # Path to the crawl4ai directory
+      context: ./crawl4ai
+      dockerfile: Dockerfile
+      args:
+        PYTHON_VERSION: "3.10"
+        INSTALL_TYPE: "basic"
+        ENABLE_GPU: true
     container_name: crawl4ai
     restart: unless-stopped
     ports:
-      - "11235:11235"  # Expose the FastAPI server port
-      - "8000:8000"    # Optional: Playwright port
+      - "11235:11235"
+      - "8000:8000"
     volumes:
-      - ./crawl4ai/config:/app/config  # Configuration directory
-      - ./crawl4ai/data:/app/data      # Persistent storage
+      - crawl4ai_storage:/app/data
+      - /dev/shm:/dev/shm
     networks:
       - demo
     environment:
-      - INSTALL_TYPE=all      # Install all dependencies (torch, transformers, etc.)
-      - ENABLE_GPU=true      # Disable GPU support (set to true if GPU is available)
-      - PYTHON_VERSION=3.10   # Python version used
-    command: >
-      uvicorn main:app --host 0.0.0.0 --port 11235
+      - LOCAL_MODE=true
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ollama-cpu:
+        condition: service_started

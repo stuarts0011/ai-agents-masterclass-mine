@@ -1,0 +1,116 @@
+{
+  "name": "Legislation and Caselaw Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "agent": "reActAgent",
+        "options": {
+          "humanMessageTemplate": "{input}\nYou are the Legislation and Caselaw Agent. You are a sub-agent in a Retrieval-Augmented Generation (RAG) system designed to assist lawyers in NSW, Australia. Your role is to find and check caselaw and legislation references using external legal resources.\n\nYour responsibilities include:\n1. Checking the currency of caselaw and legislation referenced in user queries provided by the Chat Agent.\n2. Cross-reference information requested by the Chat Agent with external legal resources to identify:\n   - Updates to caselaw (e.g., new decisions, overturns, or amendments).\n   - Updates to the version of the legislation since the version relevant to the user request (e.g., amendments, repeals, or new regulations).\n - \n3. Providing summaries of updates or discrepancies, including references to external sources.\n\nGuidelines:\n1. For caselaw queries:\n   - Check if the case has been updated, overturned, or amended.\n   - Highlight any discrepancies between the RAG database and external resources.\n2. For legislation queries:\n   - Check if the legislation has been amended or repealed.\n   - Provide an updated summary of the legislation, annotating any changes.\n3. Always include references to external sources (e.g., case citations, legislation sections).\n\nEnsure your responses are precise, well-organized, and based on the most up-to-date information.\nIt is unacceptable to hallucinate. All citations or legislation or caselaw must exist. Once you have come up with references you must double-check that each reference exists and that any quotations are verbatim. \nIf you make things up, you will lose credibility points and increasingly will not be trusted in the future. So make sure your responses are accurate.\n\nHere is an explanation of the Check legislation and caselaw tool: \n\nInput Handling:\n\nThe input is assumed to be a JSON object with a text field containing the user's query.\n\nExample input:\n\njson\nCopy\n{\n  \"text\": \"Can you check if the case Smith v Jones [2020] NSWSC 123 has been updated?\"\n}\nQuery Type Detection:\n\nThe code checks if the query contains keywords like case, caselaw, legislation, or act to determine the type of query.\n\nReference Extraction:\n\nFor caselaw, it uses a regex pattern to extract case names or citations (e.g., Smith v Jones [2020] NSWSC 123).\n\nFor legislation, it uses a regex pattern to extract legislation names or sections (e.g., Crimes Act 1900 (NSW), s 123).\n\nURL Construction:\n\nFor caselaw, it constructs a search URL for caselaw.nsw.gov.au.\n\nFor legislation, it constructs a search URL for legislation.nsw.gov.au.\n\nOutput:\n\nThe code returns an object with:\n\nqueryType: Either \"caselaw\" or \"legislation\".\n\nreference: The extracted case name, citation, or legislation reference.\n\nurl: The constructed URL for the query.\n\noriginalQuery: The original query text for reference.\n{agent_scratchpad}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        -200,
+        -220
+      ],
+      "id": "3011c157-c8f1-4e8d-bf02-41aede3e294c",
+      "name": "Legislation and Caselaw Agent"
+    },
+    {
+      "parameters": {
+        "model": "llama3.1:latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmOllama",
+      "typeVersion": 1,
+      "position": [
+        -200,
+        0
+      ],
+      "id": "0d5dd080-473e-450a-b830-141e2ecc0e57",
+      "name": "Ollama Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "O4W78n799KDImsmX",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "Check_legislation_and_caselaw",
+        "description": "Call this tool to check legislation, cases and caselaw",
+        "jsCode": "// Parse the input query and extract relevant details\nconst inputQuery = $input.all()[0].json;\n\n// Initialize variables\nlet queryType = null;\nlet reference = null;\nlet url = null;\n\n// Determine if the query is about caselaw or legislation\nif (inputQuery.text.includes(\"case\") || inputQuery.text.includes(\"caselaw\")) {\n  queryType = \"caselaw\";\n  // Extract case name or citation (example: \"Smith v Jones [2020] NSWSC 123\")\n  reference = inputQuery.text.match(/([A-Za-z]+ v [A-Za-z]+ \\[[0-9]{4}\\] [A-Za-z]+ [0-9]+)/)?.[0];\n  if (reference) {\n    // Construct the URL for caselaw search\n    url = `https://www.caselaw.nsw.gov.au/search?query=${encodeURIComponent(reference)}`;\n  }\n} else if (inputQuery.text.includes(\"legislation\") || inputQuery.text.includes(\"act\")) {\n  queryType = \"legislation\";\n  // Extract legislation name or section (example: \"Crimes Act 1900 (NSW), s 123\")\n  reference = inputQuery.text.match(/([A-Za-z]+ Act [0-9]+ \\(NSW\\)(, s [0-9]+)?)/)?.[0];\n  if (reference) {\n    // Construct the URL for legislation search\n    url = `https://legislation.nsw.gov.au/search?query=${encodeURIComponent(reference)}`;\n  }\n}\n\n// Return the parsed data and constructed URL\nif (url) {\n  return {\n    queryType,\n    reference,\n    url,\n    originalQuery: inputQuery.text,\n  };\n} else {\n  throw new Error(\"Unable to determine query type or extract reference.\");\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1.1,
+      "position": [
+        180,
+        -20
+      ],
+      "id": "bea62956-55a7-410d-9be6-3f6aa6088ce2",
+      "name": "Check_legislation_and_caselaw"
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -480,
+        -220
+      ],
+      "id": "15a280ea-e0b1-4716-910c-3037967ced5c",
+      "name": "Workflow Input Trigger"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Ollama Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Legislation and Caselaw Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check_legislation_and_caselaw": {
+      "ai_tool": [
+        [
+          {
+            "node": "Legislation and Caselaw Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Workflow Input Trigger": {
+      "main": [
+        [
+          {
+            "node": "Legislation and Caselaw Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1b0c3c32-e7a6-4af4-872b-17d7a1ad4599",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "558d88703fb65b2d0e44613bc35916258b0f0bf983c5d4730c00c424b77ca36a"
+  },
+  "id": "Le8C9TxnXXt8SYmg",
+  "tags": []
+}

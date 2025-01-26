@@ -1,0 +1,314 @@
+{
+  "name": "Chat Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "db28387d-1a6c-4ba1-85e5-d7a70f437348",
+      "name": "When chat message received",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -220,
+        -700
+      ],
+      "webhookId": "e9325791-143d-4aea-be69-160d6bbf9653"
+    },
+    {
+      "parameters": {
+        "model": "llama3.1:latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        100,
+        -460
+      ],
+      "id": "a8fbabfb-9356-4025-83de-28fe6a26cc7f",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "O4W78n799KDImsmX",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "invoke_n8n_agent",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -220,
+        -520
+      ],
+      "id": "b03c4870-2f76-49af-89a9-d728febd9dd9",
+      "name": "Webhook",
+      "webhookId": "fee50e6f-4ee5-4c0a-9d0c-58ed9a280f49"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        -700
+      ],
+      "id": "03ff9a7b-fa7f-477a-b7a2-5032d6fc042e",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "75ebfdef-c8e2-4c3e-b716-1479d0cc2a73",
+              "name": "chatInput",
+              "value": "={{ $json?.chatInput || $json.body.chatInput }}",
+              "type": "string"
+            },
+            {
+              "id": "59b7a20f-0626-4861-93e2-015d430c266e",
+              "name": "sessionId",
+              "value": "={{ $json?.sessionId || $json.body.sessionId}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "42aea80f-6bb5-4268-833a-6b0256f6959a",
+      "name": "Edit Fields",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        80,
+        -700
+      ]
+    },
+    {
+      "parameters": {
+        "name": "Call_Legislation_and_Caselaw_Agent",
+        "description": "Call this tool to get information on information on legislation or caselaw related to or on the topic of the user query.\nTool Name: Legislation and Caselaw Agent\nPurpose:\nThis tool is designed to assist lawyers in NSW, Australia, by checking the currency of caselaw and legislation references. It retrieves and verifies information from external legal resources (legislation.nsw.gov.au for legislation and caselaw.nsw.gov.au for caselaw) and provides summaries of updates or discrepancies.\n\nInput Format:\nWhen calling this tool, provide the following input as a JSON object:\n\njson\nCopy\n{\n  \"text\": \"The user's query about caselaw or legislation.\"\n}\nExamples of Valid Input:\nFor caselaw:\n\njson\nCopy\n{\n  \"chatinput\": \"Can you check if the case Smith v Jones [2020] NSWSC 123 has been updated?\"\n}\nFor legislation:\n\njson\nCopy\n{\n  \"text\": \"Has the Crimes Act 1900 (NSW), s 123 been amended recently?\"\n}\nOutput Format:\nThe tool will return a JSON object with the following structure:\n\njson\nCopy\n{\n  \"queryType\": \"caselaw\" | \"legislation\",\n  \"reference\": \"The extracted case name, citation, or legislation reference.\",\n  \"url\": \"The constructed URL for the query.\",\n  \"originalQuery\": \"The original query text.\",\n  \"summary\": \"A summary of updates or discrepancies (if any).\",\n  \"externalReferences\": [\n    {\n      \"source\": \"Name of the external resource (e.g., caselaw.nsw.gov.au).\",\n      \"citation\": \"The citation or reference from the external resource.\",\n      \"details\": \"Details about updates, amendments, or discrepancies.\"\n    }\n  ]\n}\nExample Output:\nFor caselaw:\n\njson\nCopy\n{\n  \"queryType\": \"caselaw\",\n  \"reference\": \"Smith v Jones [2020] NSWSC 123\",\n  \"url\": \"https://www.caselaw.nsw.gov.au/search?query=Smith%20v%20Jones%20%5B2020%5D%20NSWSC%20123\",\n  \"originalQuery\": \"Can you check if the case Smith v Jones [2020] NSWSC 123 has been updated?\",\n  \"summary\": \"The case Smith v Jones [2020] NSWSC 123 has not been overturned or amended. It remains good law.\",\n  \"externalReferences\": [\n    {\n      \"source\": \"caselaw.nsw.gov.au\",\n      \"citation\": \"Smith v Jones [2020] NSWSC 123\",\n      \"details\": \"No updates found. Last accessed on 2023-10-15.\"\n    }\n  ]\n}\nFor legislation:\n\njson\nCopy\n{\n  \"queryType\": \"legislation\",\n  \"reference\": \"Crimes Act 1900 (NSW), s 123\",\n  \"url\": \"https://legislation.nsw.gov.au/search?query=Crimes%20Act%201900%20(NSW),%20s%20123\",\n  \"originalQuery\": \"Has the Crimes Act 1900 (NSW), s 123 been amended recently?\",\n  \"summary\": \"Section 123 of the Crimes Act 1900 (NSW) was amended on 2023-09-01. The changes include...\",\n  \"externalReferences\": [\n    {\n      \"source\": \"legislation.nsw.gov.au\",\n      \"citation\": \"Crimes Act 1900 (NSW), s 123\",\n      \"details\": \"Amended on 2023-09-01. Changes include...\"\n    }\n  ]\n}\nGuidelines for Using the Tool:\nInput Validation:\n\nEnsure the input query is clear and contains a valid case name, citation, or legislation reference.\n\nIf the query is ambiguous, ask the user for clarification before calling the tool.\n\nError Handling:\n\nIf the tool cannot find the requested case or legislation, it will return an error message. Handle this gracefully and inform the user.\n\nAccuracy:\n\nAlways verify the output from the tool before presenting it to the user. Ensure all citations and references are accurate.\n\nUsage:\n\nUse this tool only for queries related to NSW caselaw or legislation. For other jurisdictions, use the appropriate tools.\n\nExample Interaction:\nUser Query:\nCopy\n\"Can you check if the case Smith v Jones [2020] NSWSC 123 has been updated?\"\nHead Chat Agent's Call to the Tool:\njson\nCopy\n{\n  \"text\": \"Can you check if the case Smith v Jones [2020] NSWSC 123 has been updated?\"\n}\nTool's Response:\njson\nCopy\n{\n  \"queryType\": \"caselaw\",\n  \"reference\": \"Smith v Jones [2020] NSWSC 123\",\n  \"url\": \"https://www.caselaw.nsw.gov.au/search?query=Smith%20v%20Jones%20%5B2020%5D%20NSWSC%20123\",\n  \"originalQuery\": \"Can you check if the case Smith v Jones [2020] NSWSC 123 has been updated?\",\n  \"summary\": \"The case Smith v Jones [2020] NSWSC 123 has not been overturned or amended. It remains good law.\",\n  \"externalReferences\": [\n    {\n      \"source\": \"caselaw.nsw.gov.au\",\n      \"citation\": \"Smith v Jones [2020] NSWSC 123\",\n      \"details\": \"No updates found. Last accessed on 2023-10-15.\"\n    }\n  ]\n}",
+        "workflowId": {
+          "__rl": true,
+          "value": "Le8C9TxnXXt8SYmg",
+          "mode": "list",
+          "cachedResultName": "Legislation and Caselaw Agent"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2,
+      "position": [
+        500,
+        -460
+      ],
+      "id": "1f57619b-25b8-4fd2-b74e-a316daabc4be",
+      "name": "Call Legislation and Caselaw Agent"
+    },
+    {
+      "parameters": {
+        "name": "Call_RAG_Database_Agent",
+        "description": "Call this tool to get information on information from the RAG database related to or on the topic that the user has requested.",
+        "workflowId": {
+          "__rl": true,
+          "value": "bfgJ93af4InoKFil",
+          "mode": "list",
+          "cachedResultName": "RAG Database Agent"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2,
+      "position": [
+        660,
+        -460
+      ],
+      "id": "ac6f5a71-4b93-427b-be8d-c8550babfa30",
+      "name": "Call RAG Database Agent"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are a helpful assistant.\n\nUse your tool/s to help respond to the user input as appropriate.\n\nTool Name: Current_date_and_time_tool \nPurpose: This tool is to retrieve the current date and time.\nTool Name: Legislation and Caselaw Agent\nPurpose: This tool is designed to assist lawyers in NSW, Australia, by checking the currency of caselaw and legislation references. It retrieves and verifies information from external legal resources (legislation.nsw.gov.au for legislation and caselaw.nsw.gov.au for caselaw) and provides summaries of updates or discrepancies.\n\nInput Format\nWhen calling this tool, provide the following input as a JSON object:\n\n{{\n  \"text\": \"The user's query about caselaw or legislation.\"\n}}\n\nExamples of Valid Input:\nFor caselaw:\n{{\n  \"text\": \"Can you check if the case Smith v Jones [2020] NSWSC 123 has been updated?\"\n}}\n\nFor legislation:\n{{\n  \"text\": \"Has the Crimes Act 1900 (NSW), s 123 been amended recently?\"\n}}\n\nOutput Format\nThe tool will return a JSON object with the following structure:\n\n{{\n  \"queryType\": \"caselaw\" | \"legislation\",\n  \"reference\": \"The extracted case name, citation, or legislation reference.\",\n  \"url\": \"The constructed URL for the query.\",\n  \"originalQuery\": \"The original query text.\",\n  \"summary\": \"A summary of updates or discrepancies (if any).\",\n  \"externalReferences\": [\n    {{\n      \"source\": \"Name of the external resource (e.g., caselaw.nsw.gov.au).\",\n      \"citation\": \"The citation or reference from the external resource.\",\n      \"details\": \"Details about updates, amendments, or discrepancies.\"\n    }}\n  ]\n}}\n\nExample Output:\nFor caselaw:\n{{\n  \"queryType\": \"caselaw\",\n  \"reference\": \"Smith v Jones [2020] NSWSC 123\",\n  \"url\": \"https://www.caselaw.nsw.gov.au/search?query=Smith%20v%20Jones%20%5B2020%5D%20NSWSC%20123\",\n  \"originalQuery\": \"Can you check if the case Smith v Jones [2020] NSWSC 123 has been updated?\",\n  \"summary\": \"The case Smith v Jones [2020] NSWSC 123 has not been overturned or amended. It remains good law.\",\n  \"externalReferences\": [\n    {{\n      \"source\": \"caselaw.nsw.gov.au\",\n      \"citation\": \"Smith v Jones [2020] NSWSC 123\",\n      \"details\": \"No updates found. Last accessed on 2023-10-15.\"\n    }}\n  ]\n}}\n\nFor legislation:\n{{\n  \"queryType\": \"legislation\",\n  \"reference\": \"Crimes Act 1900 (NSW), s 123\",\n  \"url\": \"https://legislation.nsw.gov.au/search?query=Crimes%20Act%201900%20(NSW),%20s%20123\",\n  \"originalQuery\": \"Has the Crimes Act 1900 (NSW), s 123 been amended recently?\",\n  \"summary\": \"Section 123 of the Crimes Act 1900 (NSW) was amended on 2023-09-01. The changes include...\",\n  \"externalReferences\": [\n    {{\n      \"source\": \"legislation.nsw.gov.au\",\n      \"citation\": \"Crimes Act 1900 (NSW), s 123\",\n      \"details\": \"Amended on 2023-09-01. Changes include...\"\n    }}\n  ]\n}}\n\nGuidelines for Using the Tool\nInput Validation:\n- Ensure the input query is clear and contains a valid case name, citation, or legislation reference.\n- If the query is ambiguous, ask the user for clarification before calling the tool.\n\nError Handling:\n- If the tool cannot find the requested case or legislation, it will return an error message. Handle this gracefully and inform the user.\n\nAccuracy:\n- Always verify the output from the tool before presenting it to the user. Ensure all citations and references are accurate.\n\nUsage:\n- Use this tool for queries related to caselaw or legislation.\n\n{agent_scratchpad}\n\nYou may extract and combine relevant data from your previous steps when responding to me."
+        }
+      },
+      "id": "fc56d96d-d1b4-4b74-9ef2-4b4983edc3cb",
+      "name": "Plan Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        300,
+        -700
+      ]
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        300,
+        -460
+      ],
+      "id": "986446a8-bf60-4149-b65f-0d63459fbdc1",
+      "name": "Postgres Chat Memory",
+      "credentials": {
+        "postgres": {
+          "id": "HPFAR0N6uBzvg2tU",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "Current_date_and_time_tool",
+        "description": "Get current date and time",
+        "jsCode": "// Get the current date and time\nconst currentDate = new Date();\n\n// Format the date and time as a string\nconst formattedDate = currentDate.toISOString(); // Example: \"2023-10-05T12:34:56.789Z\"\n\n// Return the result as a string\nreturn formattedDate;"
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1.1,
+      "position": [
+        820,
+        -460
+      ],
+      "id": "5fd9507e-e95c-438b-bafa-5777f8eaa17a",
+      "name": "Date and Time Tool"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Plan Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Plan Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Legislation and Caselaw Agent": {
+      "ai_tool": [
+        [
+          {
+            "node": "Plan Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call RAG Database Agent": {
+      "ai_tool": [
+        [
+          {
+            "node": "Plan Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plan Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Plan Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Date and Time Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "Plan Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "2cf6f7af-15cb-4ab7-811d-bcf97351ddd3",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "558d88703fb65b2d0e44613bc35916258b0f0bf983c5d4730c00c424b77ca36a"
+  },
+  "id": "nMjahTtmGPkLwINJ",
+  "tags": []
+}

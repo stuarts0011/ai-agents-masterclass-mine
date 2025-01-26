@@ -1,0 +1,274 @@
+{
+  "name": "Crawl",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -600,
+        2420
+      ],
+      "id": "63196e45-5e36-443c-8eed-9f83f328b315",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "tableName": "legislation",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePGVector",
+      "typeVersion": 1,
+      "position": [
+        40,
+        2420
+      ],
+      "id": "0fe98796-4306-4a42-9a89-b47820684e8a",
+      "name": "Postgres PGVector Store1",
+      "credentials": {
+        "postgres": {
+          "id": "HPFAR0N6uBzvg2tU",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "url",
+                "value": "=\"{{item.url}}\""
+              },
+              {
+                "name": "title",
+                "value": "={{item.title}}"
+              },
+              {
+                "name": "content",
+                "value": "={{item.content}}"
+              },
+              {
+                "name": "content_hash",
+                "value": "={{item.content_hash}}"
+              },
+              {
+                "name": "source",
+                "value": "={{item.source}}"
+              },
+              {
+                "name": "depth",
+                "value": "={{item.depth}}"
+              },
+              {
+                "name": "language",
+                "value": "={{item.language}}"
+              },
+              {
+                "name": "content_type",
+                "value": "={{item.content_type}}"
+              },
+              {
+                "name": "author",
+                "value": "={{item.author}}"
+              },
+              {
+                "name": "published_date",
+                "value": "={{item.published_date}}"
+              },
+              {
+                "name": "keywords",
+                "value": "={{item.keywords}}"
+              },
+              {
+                "name": "status_code",
+                "value": "={{item.status_code}}"
+              },
+              {
+                "name": "response_time",
+                "value": "={{item.response_time}}"
+              },
+              {
+                "name": "headers",
+                "value": "={{item.headers}}"
+              },
+              {
+                "name": "is_new",
+                "value": "={{item.is_new}}"
+              },
+              {
+                "name": "is_updated",
+                "value": "={{item.is_updated}}"
+              },
+              {
+                "name": "crawl_id",
+                "value": "={{item.crawl_id}}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1,
+      "position": [
+        180,
+        2620
+      ],
+      "id": "80673669-60a2-4e9b-b98d-4d916d3f3132",
+      "name": "Default Data Loader1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        280,
+        2840
+      ],
+      "id": "0ee22e8b-b886-4a5c-8022-5b649f0846c1",
+      "name": "Recursive Character Text Splitter1"
+    },
+    {
+      "parameters": {
+        "model": "nomic-embed-text:latest"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [
+        60,
+        2660
+      ],
+      "id": "94cab9cd-b6f9-407c-aa51-f7a91907bbb2",
+      "name": "Embeddings Ollama2",
+      "credentials": {
+        "ollamaApi": {
+          "id": "O4W78n799KDImsmX",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const express = require('express');\nconst { chromium } = require('playwright');\nconst crypto = require('crypto');\n\nconst app = express();\nconst port = 11235;\n\n// Core extraction logic\nasync function extractContent(url, strategy = 'no-llm') {\n  const browser = await chromium.launch();\n  const page = await browser.newPage();\n  \n  try {\n    // Track timing\n    const startTime = Date.now();\n    const response = await page.goto(url, { \n      timeout: 30000,\n      waitUntil: 'domcontentloaded'\n    });\n    const responseTime = Date.now() - startTime;\n\n    // Get raw content\n    const rawHTML = await page.content();\n    \n    // Basic cleaning\n    await page.evaluate(() => {\n      document.querySelectorAll('script, style, noscript').forEach(el => el.remove());\n    });\n    const cleanText = await page.innerText('body');\n\n    // Generate content hash\n    const contentHash = crypto.createHash('sha256').update(rawHTML).digest('hex');\n\n    return {\n      url,\n      raw_html: rawHTML,\n      clean_text: cleanText,\n      content_hash: contentHash,\n      status_code: response.status(),\n      response_time,\n      headers: response.headers(),\n      title: await page.title(),\n      content_type: response.headers()['content-type'] || 'text/html'\n    };\n  } finally {\n    await browser.close();\n  }\n}\n\n// Define endpoints\napp.get('/extract', async (req, res) => {\n  try {\n    const { url, strategy } = req.query;\n    if (!url) throw new Error('Missing URL parameter');\n    \n    const result = await extractContent(url, strategy);\n    res.json(result);\n  } catch (error) {\n    res.status(500).json({ \n      error: error.message,\n      details: error.stack \n    });\n  }\n});\n\napp.get('/healthcheck', (req, res) => {\n  res.json({ status: 'OK', version: '1.0.0' });\n});\n\napp.listen(port, () => {\n  console.log(`Crawl4AI service running on port ${port}`);\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -320,
+        2420
+      ],
+      "id": "691b7c5c-ca22-40e0-8e14-d477621b7c8b",
+      "name": "Crawl"
+    },
+    {
+      "parameters": {
+        "operation": "deleteTable",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -700,
+        2720
+      ],
+      "id": "41c51af1-dc9c-453a-b94d-8ef5da9169f8",
+      "name": "Postgres1",
+      "credentials": {
+        "postgres": {
+          "id": "HPFAR0N6uBzvg2tU",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Crawl",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader1": {
+      "ai_document": [
+        [
+          {
+            "node": "Postgres PGVector Store1",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter1": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader1",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Ollama2": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Postgres PGVector Store1",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crawl": {
+      "main": [
+        [
+          {
+            "node": "Postgres PGVector Store1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "eff9fed9-428e-417b-be62-8621dc5df8ae",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "558d88703fb65b2d0e44613bc35916258b0f0bf983c5d4730c00c424b77ca36a"
+  },
+  "id": "Q3RHcKMDLWfB4TFg",
+  "tags": []
+}
