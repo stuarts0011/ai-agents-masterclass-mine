@@ -1,0 +1,11 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: "n8n"
+    static_configs:
+      - targets: ["n8n:5678"]  # Scrape n8n metrics
+  - job_name: "qdrant"
+    static_configs:
+      - targets: ["qdrant:6333"]  # Scrape qdrant metrics
+  # Do NOT include Redis (port 6379) here!

@@ -6,6 +6,7 @@ volumes:
   open-webui:
   flowise:
   crawl4ai_storage:
+  redis_data:
 
 networks:
   demo:
@@ -37,6 +38,11 @@ x-ollama: &service-ollama
     - 11434:11434
   volumes:
     - ollama_storage:/root/.ollama
+  healthcheck:
+    test: ["CMD", "curl", "-f", "http://localhost:11434"]
+    interval: 10s
+    timeout: 5s
+    retries: 5
 
 x-init-ollama: &init-ollama
   image: ollama/ollama:latest
@@ -87,6 +93,13 @@ services:
       - POSTGRES_USER
       - POSTGRES_PASSWORD
       - POSTGRES_DB
+      - POSTGRESQL_CONF=|
+          shared_buffers=2GB
+          work_mem=64MB
+          maintenance_work_mem=1GB
+          max_wal_size=4GB
+          checkpoint_timeout=30min
+          pgvector.compatibility=on
     volumes:
       - postgres_storage:/var/lib/postgresql/data
     healthcheck:
@@ -95,9 +108,19 @@ services:
       timeout: 5s
       retries: 10
 
+  prometheus:
+    image: prom/prometheus
+    ports: ["9090:9090"]
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks: ["demo"]
+  
+  
   n8n-import:
     <<: *service-n8n
-    container_name: n8n-import
+    build:
+      context: .
+      dockerfile: Dockerfile.Debian  # Explicitly specify the Dockerfilecontainer_name: n8n-import
     entrypoint: /bin/sh
     command:
       - "-c"
@@ -108,10 +131,11 @@ services:
       postgres:
         condition: service_healthy
 
-  n8n: 
+  n8n:
     <<: *service-n8n
-    build: .
-    container_name: n8n
+    build:
+      context: .
+      dockerfile: Dockerfile.Debian  # Use Debian Dockerfilecontainer_name: n8n
     restart: unless-stopped
     ports:
       - "5678:5678"
@@ -119,14 +143,41 @@ services:
       - n8n_storage:/home/node/.n8n
       - ./n8n/backup:/backup
       - ./shared:/data/shared
-      - C:\Users\ssimington\Documents\Clientfilesdummy:/data/clientfiles
+      - C:/Users/ssimington/Documents/clientfilesdummy:/data/clientfiles  # Fixed path
+      - ./checkpoints:/data/checkpoints
+      - ./tmp:/tmp
     depends_on:
       postgres:
         condition: service_healthy
     networks:
       - demo
-
+    environment:
+      - N8N_MEMORY_MANAGEMENT_MAX_SIZE=30720
+      - NODE_OPTIONS=--max-old-space-size=24576
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}  # From .env
+    deploy:
+      resources:
+        limits:
+          memory: 16g
+        reservations:
+          memory: 8g
   
+# Add Redis for workflow queueing
+  redis:
+    image: redis:alpine
+    networks: ["demo"]
+    command: 
+      - redis-server 
+      - --requirepass your_secure_password  # Add password
+      - --rename-command FLUSHDB ""
+      - --rename-command FLUSHALL ""
+    environment:
+    - REDIS_PASSWORD=your_secure_password
+    volumes:
+    - redis_data:/data
+
   qdrant:
     image: qdrant/qdrant
     container_name: qdrant
@@ -163,13 +214,12 @@ services:
     <<: *init-ollama
     depends_on:
       - ollama-gpu
+  
   crawl4ai:
     build:
       context: ./crawl4ai
       dockerfile: Dockerfile
       args:
-        PYTHON_VERSION: "3.10"
-        INSTALL_TYPE: "basic"
         ENABLE_GPU: true
     container_name: crawl4ai
     restart: unless-stopped
@@ -186,5 +236,3 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      ollama-cpu:
-        condition: service_started
